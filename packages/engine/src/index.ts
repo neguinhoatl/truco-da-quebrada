@@ -11,10 +11,10 @@ export const RANK_ORDER: Rank[] = ['4', '5', '6', '7', 'Q', 'J', 'K', 'A', '2', 
 /** Ordem de naipes das manilhas (Paulista): paus > copas > espadas > ouros */
 export const MANILHA_SUIT_STRENGTH: Record<Suit, number> = { paus: 4, copas: 3, espadas: 2, ouros: 1 };
 
-/** Presets EDITÁVEIS — "limpo"/"sujo" variam entre grupos; pendente de confirmação do usuário. */
+/** Presets EDITÁVEIS — "limpo"/"sujo" variam entre grupos; confirmados pelo usuário em 23/10/2026. */
 export const DECK_PRESETS = {
-  sujo: { ranks: ['A', '2', '3', '4', '5', '6', '7', 'Q', 'J', 'K'] as Rank[], label: 'Baralho sujo (40 cartas)', pendingUserConfirmation: true },
-  limpo: { ranks: ['A', '2', '3', 'Q', 'J', 'K'] as Rank[], label: 'Baralho limpo (sem 4, 5, 6, 7 — 24 cartas)', pendingUserConfirmation: true },
+  sujo: { ranks: ['A', '2', '3', '4', '5', '6', '7', 'Q', 'J', 'K'] as Rank[], label: 'Baralho sujo (40 cartas)', confirmedByUser: true },
+  limpo: { ranks: ['A', '2', '3', 'Q', 'J', 'K'] as Rank[], label: 'Baralho limpo (sem 4, 5, 6, 7 — 24 cartas)', confirmedByUser: true },
 } as const;
 
 export interface Rules {
@@ -26,6 +26,9 @@ export interface Rules {
   /** Se as 3 rodadas empatarem: ninguém pontua (padrão) ou o time de quem é "mão" leva. */
   allTiedResult: 'nobody' | 'maoTeam';
   maoDeOnzeValue: number;
+  maoDeFerroValue: number;
+  /** Qualquer jogador pode pedir truco fora da sua vez (padrão: true em 6 jogadores). */
+  trucoAnySeat: boolean;
 }
 
 export function makeRules(p: Partial<Rules> = {}): Rules {
@@ -38,6 +41,8 @@ export function makeRules(p: Partial<Rules> = {}): Rules {
     targetScore: p.targetScore ?? 12,
     allTiedResult: p.allTiedResult ?? 'nobody',
     maoDeOnzeValue: p.maoDeOnzeValue ?? 3,
+    maoDeFerroValue: p.maoDeFerroValue ?? 3,
+    trucoAnySeat: p.trucoAnySeat ?? (p.playersCount ?? 4) === 6,
   };
   if (![2, 4, 6].includes(r.playersCount)) throw new Error('playersCount deve ser 2, 4 ou 6');
   if (new Set(r.deckRanks).size !== r.deckRanks.length || r.deckRanks.some((x) => !RANK_ORDER.includes(x))) throw new Error('deckRanks inválido');
@@ -173,7 +178,7 @@ function startHand(s: GameState) {
   const onze = rules.targetScore - 1;
   const at = [s.score[0] === onze, s.score[1] === onze];
   s.onzeTeam = null;
-  if (at[0] && at[1]) { s.mode = 'ferro'; s.phase = 'playing'; }
+  if (at[0] && at[1]) { s.mode = 'ferro'; s.phase = 'playing'; s.value = rules.maoDeFerroValue; }
   else if (at[0] || at[1]) { s.mode = 'onze'; s.onzeTeam = at[0] ? 0 : 1; s.phase = 'onze_decision'; }
   else { s.mode = 'normal'; s.phase = 'playing'; }
   log(s, { type: 'hand_start', seat: s.dealer, detail: `mão ${s.handNumber}, dealer ${s.dealer}${s.vira ? `, vira ${cardStr(s.vira)}, manilha ${s.manilhaRank}` : ''}, modo ${s.mode}` });
@@ -265,7 +270,7 @@ export function applyAction(state: GameState, action: Action): Result {
       if (s.phase !== 'playing') return err('Não pode pedir truco agora');
       if (s.mode !== 'normal') return err('Truco não é permitido na mão de onze / mão de ferro');
       if (s.pending) return err('Já existe um pedido pendente');
-      if (action.seat !== s.turn) return err('Só pode pedir truco na sua vez');
+      if (!s.rules.trucoAnySeat && action.seat !== s.turn) return err('Só pode pedir truco na sua vez');
       if (s.lastRaiserTeam === team) return err('Seu time não pode aumentar a própria chamada');
       const i = ladder.indexOf(s.value);
       if (i >= ladder.length - 1) return err('Aposta já está no máximo');
@@ -322,8 +327,8 @@ export function legalActions(s: GameState, seat: number): Action['type'][] {
   if (s.phase === 'onze_decision') return t === s.onzeTeam ? ['onze_play', 'onze_run'] : [];
   if (s.phase !== 'playing') return [];
   if (s.pending) return t !== s.pending.callerTeam ? (s.pending.proposed < 12 ? ['accept', 'raise', 'run'] : ['accept', 'run']) : [];
-  if (seat === s.turn) {
-    acts.push('play');
+  if (seat === s.turn) acts.push('play');
+  if (seat === s.turn || s.rules.trucoAnySeat) {
     if (s.mode === 'normal' && s.lastRaiserTeam !== t && s.value < 12) acts.push('truco');
   }
   return acts;

@@ -14,7 +14,9 @@ describe('baralho e embaralhamento', () => {
     expect(buildDeck(DECK_PRESETS.sujo.ranks)).toHaveLength(40);
     expect(buildDeck(DECK_PRESETS.limpo.ranks)).toHaveLength(24);
     expect(DECK_PRESETS.limpo.ranks).not.toContain('4');
-    expect(DECK_PRESETS.sujo.pendingUserConfirmation).toBe(true);
+    expect(DECK_PRESETS.sujo.confirmedByUser).toBe(true);
+    expect(DECK_PRESETS.limpo.confirmedByUser).toBe(true);
+    expect(makeRules().variant).toBe('paulista');
     expect(makeRules({ deckPreset: 'custom', deckRanks: ['A', '2', '3', 'K', 'J', 'Q', '7'] }).deckRanks).toHaveLength(7);
   });
   it('rejeita regras inválidas', () => {
@@ -231,9 +233,21 @@ describe('truco', () => {
     h = ok(h, { type: 'accept', seat: 0 });
     expect(h.value).toBe(12);
   });
-  it('truco só na sua vez', () => {
+  it('2/4 jogadores: truco só na sua vez', () => {
     const g = createGame({ playersCount: 4 }, { seed: 2 });
     expect(applyAction(g, { type: 'truco', seat: 2 }).ok).toBe(false);
+  });
+  it('6 jogadores: qualquer jogador pode pedir truco (exceto o time que já aumentou)', () => {
+    let g = createGame({ playersCount: 6 }, { seed: 2 });
+    expect(g.turn).toBe(1);
+    expect(legalActions(g, 4)).toEqual(['truco']);
+    g = ok(g, { type: 'truco', seat: 4 });
+    expect(g.pending).toMatchObject({ callerTeam: 0, proposed: 3 });
+    g = ok(g, { type: 'accept', seat: 5 });
+    expect(applyAction(g, { type: 'truco', seat: 2 }).ok).toBe(false);
+    g = ok(g, { type: 'truco', seat: 3 });
+    g = ok(g, { type: 'run', seat: 0 });
+    expect(g.score).toEqual([0, 3]);
   });
 });
 
@@ -278,12 +292,18 @@ describe('mão de onze e mão de ferro', () => {
   it('mão de ferro: 11x11, às cegas, sem truco, jogo por índice', () => {
     let g = nextHandWith([11, 11], 2);
     expect(g.mode).toBe('ferro');
+    expect(g.value).toBe(3);
+    
     expect(g.phase).toBe('playing');
     const v = getPlayerView(g, g.turn);
     expect(v.seats[g.turn].cards).toEqual([null, null, null]);
     expect(applyAction(g, { type: 'truco', seat: g.turn }).ok).toBe(false);
     g = ok(g, { type: 'play', seat: g.turn, cardIndex: 1 });
     expect(g.currentPlays).toHaveLength(1);
+    g = ok(g, { type: 'play', seat: g.turn, cardIndex: 0 });
+    // termina a mão: vale 3
+    while (g.mode === 'ferro' && g.phase === 'playing') g = ok(g, { type: 'play', seat: g.turn, cardIndex: 0 });
+    expect(g.lastHand!.winnerTeam === null || g.lastHand!.points === 3).toBe(true);
   });
 });
 
@@ -326,7 +346,7 @@ function simulate(rules: Parameters<typeof createGame>[0], seed: number) {
     const seat = seats[Math.floor(rnd() * seats.length)];
     const acts = legalActions(g, seat);
     const t = acts[Math.floor(rnd() * acts.length)];
-    const pick = t === 'truco' && rnd() < 0.7 ? 'play' : t;
+    const pick = t === 'truco' && rnd() < 0.7 && seat === g.turn ? 'play' : t;
     const a: Action = pick === 'play' ? { type: 'play', seat, cardIndex: Math.floor(rnd() * g.hands[seat].length) } : ({ type: pick, seat } as Action);
     const r = applyAction(g, a);
     expect(r.ok, r.ok ? '' : r.error).toBe(true);

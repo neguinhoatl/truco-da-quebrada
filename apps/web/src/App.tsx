@@ -48,10 +48,10 @@ export default function App() {
       <h3>Paulista</h3><p>Vira define a manilha (próxima carta). Naipes da manilha: ♣ paus &gt; ♥ copas &gt; ♠ espadas &gt; ♦ ouros. Truco: 1 → 3 → 6 → 9 → 12.</p>
       <h3>Mineiro</h3><p>Manilhas fixas: 4♣ (zap) &gt; 7♥ (copas) &gt; A♠ (espadilha) &gt; 7♦ (pica-fumo). Truco: 2 → 4 → 6 → 8 → 10 → 12.</p>
       <h3>Força das cartas</h3><div className="row">{(['3', '2', 'A', 'K', 'J', 'Q', '7', '6', '5', '4'] as const).map((r) => <PlayingCard key={r} small card={{ rank: r, suit: 'espadas' }} />)}</div>
-      <h3>Baralho (confirme com a rapaziada)</h3>
+      <h3>Baralho (confirmado)</h3>
       <p><b>{DECK_PRESETS.sujo.label}:</b> {DECK_PRESETS.sujo.ranks.join(' ')}<br /><b>{DECK_PRESETS.limpo.label}:</b> {DECK_PRESETS.limpo.ranks.join(' ')}</p>
-      <p className="notice">“Limpo” e “sujo” mudam de grupo pra grupo — a composição é editável na criação da mesa.</p>
-      <h3>Mão de onze / mão de ferro</h3><p>Time com 11 vê as cartas do parceiro e decide: joga valendo 3 ou corre (adversário leva 1). Sem truco. 11 a 11: mão de ferro, todo mundo às cegas.</p>
+      <p className="notice">Composição confirmada; continua editável na criação da mesa.</p>
+      <h3>Mão de onze / mão de ferro</h3><p>Time com 11 vê as cartas do parceiro e decide: joga valendo 3 ou corre (adversário leva 1). Sem truco. 11 a 11: mão de ferro, todo mundo às cegas, vale 3, sem truco. Em 6 jogadores qualquer um pode pedir truco.</p>
       {back}</main>);
   if (screen === 'settings') return (
     <main className="screen panel"><h2>Configurações</h2>{SoundBtn}
