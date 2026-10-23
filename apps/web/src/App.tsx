@@ -6,6 +6,10 @@ import { MeusBerros } from './components/MeusBerros';
 import { audio, AudioSettings } from './audio/AudioManager';
 const params = new URLSearchParams(location.search);
 import { PlayingCard } from './components/PlayingCard';
+import { CreateRoom } from './components/CreateRoom';
+import { Lobby } from './components/Lobby';
+import { OnlineTable } from './components/OnlineTable';
+import { useRoomState, call, socket } from './net';
 
 const PREVIEW_SEATS: TableSeat[] = [
   { nickname: 'Você', team: 0, cardCount: 3, isTurn: true }, { nickname: 'Tião', team: 1, cardCount: 2 },
@@ -14,13 +18,22 @@ const PREVIEW_SEATS: TableSeat[] = [
 const MY: Card[] = [{ rank: '3', suit: 'copas' }, { rank: '7', suit: 'ouros' }, { rank: 'A', suit: 'espadas' }];
 const CENTER = [{ seat: 1, card: { rank: 'K', suit: 'paus' } as Card }, { seat: 2, card: { rank: '2', suit: 'ouros' } as Card }, { seat: 3, card: { rank: 'J', suit: 'copas' } as Card }];
 
-type Screen = 'entry' | 'menu' | 'rules' | 'settings' | 'table' | 'join' | 'berros';
+type Screen = 'entry' | 'menu' | 'rules' | 'settings' | 'table' | 'join' | 'berros' | 'create' | 'room';
 export default function App() {
   const [nick, setNick] = useState(() => localStorage.getItem('tq:nick') ?? '');
   const [sound, setSound] = useState(() => localStorage.getItem('tq:sound') !== 'off');
   const [screen, setScreen] = useState<Screen>(() => (new URLSearchParams(location.search).get('screen') as Screen) || 'entry');
   const [err, setErr] = useState('');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() => (params.get('sala') ?? '').toUpperCase());
+  const { st, connected, clear } = useRoomState();
+  const [joinErr, setJoinErr] = useState(''), [canWatch, setCanWatch] = useState(false);
+  const join = async (role: 'player' | 'spectator', c = code, nn = nick) => {
+    setJoinErr(''); socket();
+    const r = await call('room:join', { code: c.trim(), nickname: nn.trim(), role });
+    if (!r.ok) { setJoinErr(r.error); setCanWatch(/assistir/.test(r.error)); setScreen('join'); return; }
+    setScreen('room');
+  };
+  const leaveRoom = () => { clear(); history.replaceState(null, '', location.pathname); setCode(''); setScreen('menu'); };
   const [seatCount, setSeatCount] = useState(() => Number(new URLSearchParams(location.search).get('n')) || 4);
   const toggleSound = () => { audio.unlock(); setSound((s) => { localStorage.setItem('tq:sound', s ? 'off' : 'on'); audio.set({ muteAll: s }); return !s; }); };
   const [as, setAs] = useState<AudioSettings>(audio.settings);
@@ -29,7 +42,8 @@ export default function App() {
     e.preventDefault();
     const n = nick.trim();
     if (n.length < 2) return setErr('Fala teu apelido aí (mínimo 2 letras).');
-    localStorage.setItem('tq:nick', n); setErr(''); audio.unlock(); setScreen('menu');
+    localStorage.setItem('tq:nick', n); setErr(''); audio.unlock(); socket();
+    if (code) join('player', code, n); else setScreen('menu');
   };
   const SoundBtn = <button type="button" className="icon-btn" onClick={toggleSound} aria-pressed={sound}>{sound ? '🔊 Som ligado' : '🔇 Som desligado'}</button>;
 
@@ -38,6 +52,7 @@ export default function App() {
       <div className="streetlight" aria-hidden />
       <h1 className="logo"><span>TRUCO</span><small>DA</small><span>QUEBRADA</span></h1>
       <p className="tagline">O truco raiz, agora online. Chama a rapaziada.</p>
+      {code && <p className="invite-banner">🃏 Você foi chamado pra mesa <b>{code}</b>. Põe teu apelido e entra!</p>}
       <div className="preview" aria-hidden><Table seats={PREVIEW_SEATS} spectators={['Dona Cida', 'Juninho']} center={CENTER} vira={{ rank: '4', suit: 'paus' }} score={[7, 9]} value={3} compact /></div>
       <form onSubmit={enter} className="entry-form">
         <label htmlFor="nick">Seu nome ou apelido</label>
@@ -71,9 +86,18 @@ export default function App() {
       <p className="notice">O jogo funciona 100% com tudo mudo.</p>{back}</main>);
   if (screen === 'join') return (
     <main className="screen panel"><h2>Entrar por código</h2>
-      <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={8} placeholder="CÓDIGO DA MESA" />
-      <button className="btn primary" disabled title="Multiplayer na Fase 2">Jogar (em breve)</button>
-      <button className="btn" disabled title="Multiplayer na Fase 2">👀 Assistir (em breve)</button>{back}</main>);
+      <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={8} placeholder="CÓDIGO DA MESA" aria-label="código da mesa" />
+      {joinErr && <p className="error" role="alert">{joinErr}</p>}
+      <button className="btn primary" disabled={code.length < 4} onClick={() => join('player')}>Sentar na mesa</button>
+      <button className={`btn${canWatch ? ' primary' : ''}`} disabled={code.length < 4} onClick={() => join('spectator')}>👀 Assistir</button>{back}</main>);
+  if (screen === 'create') return (<main className="screen panel"><h2>Criar mesa</h2><CreateRoom nick={nick} onCreated={() => setScreen('room')} />{back}</main>);
+  if (screen === 'room') {
+    if (!st) return (<main className="screen panel"><p className="notice">{connected ? 'Carregando mesa…' : 'Conectando ao servidor…'}</p>{back}</main>);
+    return (<main className={`screen ${st.view ? 'game' : 'panel'}`}>
+      {!connected && <p className="error" role="alert">Conexão caiu — tentando voltar… (seu lugar fica guardado)</p>}
+      {st.view ? <OnlineTable st={st} onLeave={leaveRoom} /> : <><h2>Mesa {st.room.code}</h2><Lobby st={st} onLeave={leaveRoom} /></>}
+    </main>);
+  }
   if (screen === 'table') return (
     <main className="screen game">
       <div className="seg">{[2, 4, 6].map((k) => <button key={k} className={`btn small${k === seatCount ? ' primary' : ''}`} onClick={() => setSeatCount(k)}>{k} jogadores</button>)}</div>
@@ -84,9 +108,10 @@ export default function App() {
       <h1 className="logo small"><span>TRUCO</span><small>DA</small><span>QUEBRADA</span></h1>
       <p className="hello">E aí, <b>{nick}</b>! Bora?</p>
       <nav className="menu-list">
-        <button className="btn primary" onClick={() => setScreen('table')}>Criar mesa</button>
+        <button className="btn primary" onClick={() => setScreen('create')}>Criar mesa</button>
         <button className="btn" onClick={() => setScreen('join')}>Entrar por código</button>
-        <button className="btn" onClick={() => setScreen('table')}>Jogar com amigos</button>
+        <button className="btn" onClick={() => setScreen('create')}>Jogar com amigos</button>
+        <button className="btn" onClick={() => setScreen('table')}>Treino local</button>
         <button className="btn" disabled>Contra bots (em breve)</button>
         <button className="btn" onClick={() => setScreen('rules')}>Regras</button>
         <button className="btn" onClick={() => setScreen('settings')}>Configurações</button>

@@ -100,3 +100,16 @@ body{background:radial-gradient(ellipse at 50% -5%,rgba(255,196,90,.3),transpare
 .bubble{max-width:180px;white-space:normal;text-align:center;width:max-content}
 .bubble--l{left:0;transform:none}.bubble--l::after{left:24px}.bubble--r{left:auto;right:0;transform:none}.bubble--r::after{left:auto;right:16px}
 @keyframes pop{from{scale:.3;opacity:0}}
+/* ===== fase 2 ===== */
+.invite-banner{background:#24513a;border:2px solid var(--light);padding:10px;border-radius:10px;margin:0;text-align:center;font-family:Georgia,serif}
+.create h3{margin:10px 0 4px}.seg.wrap{flex-wrap:wrap}.btn.chip{flex:0 0 44px}
+.deck-preview{display:flex;flex-wrap:wrap;gap:3px;align-items:center}
+.code-box{display:flex;flex-direction:column;align-items:center;gap:6px;background:#20261f;border:5px solid #7a5434;border-radius:6px;padding:10px}
+.code{font-family:ui-monospace,monospace;font-size:34px;letter-spacing:4px;color:var(--light)}
+.lobby{display:flex;flex-direction:column;gap:12px}.lobby-seats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lobby-seat{font:inherit;color:var(--cream);background:#1c1b18;border:3px solid;border-radius:12px;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding:6px}
+.lobby-seat.me{background:#2a3a2e}.lobby-seat:disabled{cursor:default}.lobby-seat .empty{opacity:.6;font-family:Georgia,serif}
+em.off{color:#aaa;font-style:normal;font-size:11px}
+.status{text-align:center;margin:0;font-size:16px;color:var(--light)}
+.partners{background:#24513a;padding:8px;border-radius:8px;display:flex;gap:12px;flex-wrap:wrap;font-size:15px}
+.mutes{font-family:Georgia,serif}.mutes summary{cursor:pointer}
