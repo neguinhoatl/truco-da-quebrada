@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { DECK_PRESETS, Card } from '@truco/engine';
 import { Table, TableSeat } from './components/Table';
+import { DemoTable } from './components/DemoTable';
+import { MeusBerros } from './components/MeusBerros';
+import { audio, AudioSettings } from './audio/AudioManager';
+const params = new URLSearchParams(location.search);
 import { PlayingCard } from './components/PlayingCard';
 
 const PREVIEW_SEATS: TableSeat[] = [
@@ -10,7 +14,7 @@ const PREVIEW_SEATS: TableSeat[] = [
 const MY: Card[] = [{ rank: '3', suit: 'copas' }, { rank: '7', suit: 'ouros' }, { rank: 'A', suit: 'espadas' }];
 const CENTER = [{ seat: 1, card: { rank: 'K', suit: 'paus' } as Card }, { seat: 2, card: { rank: '2', suit: 'ouros' } as Card }, { seat: 3, card: { rank: 'J', suit: 'copas' } as Card }];
 
-type Screen = 'entry' | 'menu' | 'rules' | 'settings' | 'table' | 'join';
+type Screen = 'entry' | 'menu' | 'rules' | 'settings' | 'table' | 'join' | 'berros';
 export default function App() {
   const [nick, setNick] = useState(() => localStorage.getItem('tq:nick') ?? '');
   const [sound, setSound] = useState(() => localStorage.getItem('tq:sound') !== 'off');
@@ -18,12 +22,14 @@ export default function App() {
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
   const [seatCount, setSeatCount] = useState(() => Number(new URLSearchParams(location.search).get('n')) || 4);
-  const toggleSound = () => { setSound((s) => { localStorage.setItem('tq:sound', s ? 'off' : 'on'); return !s; }); };
+  const toggleSound = () => { audio.unlock(); setSound((s) => { localStorage.setItem('tq:sound', s ? 'off' : 'on'); audio.set({ muteAll: s }); return !s; }); };
+  const [as, setAs] = useState<AudioSettings>(audio.settings);
+  const upd = (p: Partial<AudioSettings>) => { audio.unlock(); audio.set(p); setAs({ ...audio.settings }); if ('ambient' in p || 'privacy' in p) audio.ambient(!audio.settings.privacy && audio.settings.ambient > 0); };
   const enter = (e: React.FormEvent) => {
     e.preventDefault();
     const n = nick.trim();
     if (n.length < 2) return setErr('Fala teu apelido aí (mínimo 2 letras).');
-    localStorage.setItem('tq:nick', n); setErr(''); setScreen('menu');
+    localStorage.setItem('tq:nick', n); setErr(''); audio.unlock(); setScreen('menu');
   };
   const SoundBtn = <button type="button" className="icon-btn" onClick={toggleSound} aria-pressed={sound}>{sound ? '🔊 Som ligado' : '🔇 Som desligado'}</button>;
 
@@ -55,24 +61,24 @@ export default function App() {
       <h3>Mão de onze / mão de ferro</h3><p>Time com 11 vê as cartas do parceiro e decide: joga valendo 3 ou corre (adversário leva 1). Sem truco. 11 a 11: mão de ferro, todo mundo às cegas, vale 3, sem truco. Em 6 jogadores qualquer um pode pedir truco.</p>
       {back}</main>);
   if (screen === 'settings') return (
-    <main className="screen panel"><h2>Configurações</h2>{SoundBtn}
-      <p className="notice">Volumes separados (efeitos, vozes, ambiente), microfone e aparência chegam na Fase 3.</p>{back}</main>);
+    <main className="screen panel"><h2>Configurações de áudio</h2>{SoundBtn}
+      {([['effects', 'Efeitos (cartas, mesa)'], ['voices', 'Berros automáticos'], ['ambient', 'Ambiente do boteco'], ['clips', 'Áudios da galera']] as const).map(([k2, label]) =>
+        <label key={k2} className="slider">{label}<input type="range" min={0} max={1} step={0.05} value={as[k2]} onChange={(e) => upd({ [k2]: Number(e.target.value) })} /></label>)}
+      <label className="check"><input type="checkbox" checked={as.muteAll} onChange={(e) => upd({ muteAll: e.target.checked })} /> Silenciar tudo</label>
+      <label className="check"><input type="checkbox" checked={as.privacy} onChange={(e) => upd({ privacy: e.target.checked })} /> Modo privacidade (sem berros, zoeira, áudios e ambiente)</label>
+      <button className="btn" onClick={() => { audio.unlock(); audio.cardSlap(); setTimeout(() => audio.stinger('truco'), 250); }}>🔊 Testar som</button>
+      <button className="btn" onClick={() => setScreen('berros')}>🎙️ Gravar meus berros</button>
+      <p className="notice">O jogo funciona 100% com tudo mudo.</p>{back}</main>);
   if (screen === 'join') return (
     <main className="screen panel"><h2>Entrar por código</h2>
       <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={8} placeholder="CÓDIGO DA MESA" />
       <button className="btn primary" disabled title="Multiplayer na Fase 2">Jogar (em breve)</button>
       <button className="btn" disabled title="Multiplayer na Fase 2">👀 Assistir (em breve)</button>{back}</main>);
-  if (screen === 'table') {
-    const n = seatCount;
-    const names = [nick || 'Você', 'Tião', 'Parça', 'Baixinho', 'Seu Zé', 'Nega'];
-    const seats: TableSeat[] = Array.from({ length: n }, (_, i) => ({ nickname: names[i], team: (i % 2) as 0 | 1, cardCount: i === 0 ? 3 : 2, isTurn: i === 0, connected: i !== 3 }));
-    return (
+  if (screen === 'table') return (
     <main className="screen game">
-      <div className="seg">{[2, 4, 6].map((k) => <button key={k} className={`btn small${k === n ? ' primary' : ''}`} onClick={() => setSeatCount(k)}>{k} jogadores</button>)}</div>
-      <Table seats={seats} spectators={['Dona Cida', 'Juninho', 'Cabeça', 'Lú']} myCards={MY} center={CENTER} vira={{ rank: '4', suit: 'paus' }} score={[7, 9]} value={3} />
-      <div className="actions"><button className="btn truco">TRUCO!</button><button className="btn">Aceitar</button><button className="btn ghost">Correr</button></div>
-      <p className="notice">Mesa de demonstração — partida online chega na Fase 2.</p>{back}</main>); }
-
+      <div className="seg">{[2, 4, 6].map((k) => <button key={k} className={`btn small${k === seatCount ? ' primary' : ''}`} onClick={() => setSeatCount(k)}>{k} jogadores</button>)}</div>
+      <DemoTable nick={nick} n={seatCount as 2 | 4 | 6} demo={params.get('demo')} />{back}</main>);
+  if (screen === 'berros') return (<main className="screen panel"><h2>Gravar meus berros</h2><MeusBerros />{back}</main>);
   return (
     <main className="screen menu">
       <h1 className="logo small"><span>TRUCO</span><small>DA</small><span>QUEBRADA</span></h1>

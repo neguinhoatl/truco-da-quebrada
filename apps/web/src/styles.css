@@ -62,3 +62,41 @@ body{background:radial-gradient(ellipse at 50% -5%,rgba(255,196,90,.3),transpare
 .hand-card{background:none;border:none;padding:0;cursor:pointer;transition:transform .12s}.hand-card:hover,.hand-card:focus-visible{transform:translateY(-10px)}
 .actions{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px}.seg{display:flex;gap:6px}.btn.small{min-height:38px;font-size:13px;padding:6px 10px;flex:1}
 @media (min-width:900px){.screen.game{max-width:780px}.floor{aspect-ratio:16/11}}
+/* ===== momento do truco ===== */
+.moment{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(circle,rgba(0,0,0,.25),rgba(0,0,0,.7));animation:mIn .12s ease-out,mOut .2s ease-in .9s forwards;cursor:pointer}
+.moment-banner{display:flex;flex-direction:column;align-items:center;transform:rotate(-6deg);animation:slam .28s cubic-bezier(.2,1.6,.4,1)}
+.moment-text{font-family:Impact,"Arial Black",sans-serif;font-size:clamp(64px,22vw,150px);line-height:.95;color:#f7f3e8;letter-spacing:2px;padding:6px 22px;
+ background:#20261f;border:6px solid #7a5434;box-shadow:0 10px 0 #0008,0 0 0 4px #20261f;text-shadow:3px 3px 0 #b3261e,0 0 2px #fff;
+ -webkit-text-stroke:1px #fff3;white-space:nowrap;max-width:96vw;overflow:hidden;text-overflow:clip}
+.moment--run .moment-text{color:#ffd77a;text-shadow:3px 3px 0 #6a120d;font-size:clamp(56px,18vw,120px)}
+.moment--win .moment-text{color:#bff0cb;text-shadow:3px 3px 0 #1f4d33;font-size:clamp(40px,12vw,96px);white-space:normal;text-align:center}
+.moment--special .moment-text{color:#ffb347;font-size:clamp(44px,14vw,110px)}
+.moment-banner small{margin-top:10px;background:#0e0d0b;padding:4px 12px;border-radius:6px;font-size:16px;color:var(--light)}
+.moment-skip{position:absolute;bottom:18px;font-size:12px;opacity:.6;font-family:Georgia,serif}
+@keyframes slam{from{transform:rotate(-6deg) scale(2.4);opacity:0}to{transform:rotate(-6deg) scale(1);opacity:1}}
+@keyframes mIn{from{opacity:0}}@keyframes mOut{to{opacity:0;visibility:hidden}}
+.boteco.shake{animation:shake .38s linear}
+@keyframes shake{10%,90%{transform:translate(-2px,1px)}20%,80%{transform:translate(5px,-3px)}30%,50%,70%{transform:translate(-8px,3px)}40%,60%{transform:translate(8px,-2px)}}
+.seat.caller .character{filter:drop-shadow(0 0 10px #ff6b3d) drop-shadow(0 0 3px #ffd77a);transform:scale(1.12);transition:transform .15s}
+.bubble{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);z-index:200;background:#fbf6ea;color:#1b1b1b;font-family:Impact,"Arial Black",sans-serif;font-size:15px;letter-spacing:.5px;
+ padding:6px 10px;border-radius:14px;border:3px solid #1b1b1b;white-space:nowrap;box-shadow:3px 3px 0 #0008;animation:pop .18s cubic-bezier(.2,1.6,.4,1)}
+.bubble::after{content:"";position:absolute;top:100%;left:50%;margin-left:-8px;border:8px solid transparent;border-top-color:#1b1b1b}
+.bubble--galera{top:6%;left:50%;bottom:auto}
+@keyframes pop{from{transform:translateX(-50%) scale(.3);opacity:0}}
+@media (prefers-reduced-motion:reduce){.moment,.moment-banner,.bubble,.played{animation:none!important}.boteco.shake{animation:none}.moment{animation:mOut .01s 1s forwards}.seat.caller .character{transform:none}}
+/* ===== áudio de zoeira ===== */
+.clip{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.clip-btn{font:inherit;display:flex;align-items:center;justify-content:center;gap:10px;min-height:60px;border-radius:30px;border:none;background:linear-gradient(#2e6b47,#1f4d33);color:#fff;font-size:18px;box-shadow:0 4px 0 #000;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+.clip-btn.on{background:linear-gradient(#d13b2e,#9a1f17);transform:scale(1.04)}
+.clip-rec{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:#2a0d0a;border:2px solid #d13b2e;border-radius:12px;padding:10px 12px}
+.clip-rec.cancel{background:#333;border-color:#777}
+.rec-dot{width:12px;height:12px;border-radius:50%;background:#ff3b30;animation:blink 1s infinite}@keyframes blink{50%{opacity:.2}}
+.mono{font-family:ui-monospace,monospace}.meter{flex:1;min-width:80px;height:8px;background:#0006;border-radius:4px;overflow:hidden}.meter i{display:block;height:100%;background:#6bd18a;transition:width .08s}
+.clip-rec small{width:100%;font-family:Georgia,serif;opacity:.8}
+.clip-preview{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#1c1b18;padding:8px;border-radius:12px}.clip-preview audio{flex:1;min-width:180px;height:40px}
+.slider{display:flex;flex-direction:column;gap:4px;font-size:14px}.slider input{padding:0}.check{display:flex;gap:8px;align-items:center;font-family:Georgia,serif}
+.berro-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid #fff1}.berro-text{flex:1;min-width:160px;font-family:Impact,"Arial Black",sans-serif}
+.berro-row .btn.small{flex:0 0 auto}
+.bubble{max-width:180px;white-space:normal;text-align:center;width:max-content}
+.bubble--l{left:0;transform:none}.bubble--l::after{left:24px}.bubble--r{left:auto;right:0;transform:none}.bubble--r::after{left:auto;right:16px}
+@keyframes pop{from{scale:.3;opacity:0}}

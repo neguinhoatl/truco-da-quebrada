@@ -1,0 +1,1 @@
+Coloque aqui gravações reais (mp3) com o id do berro, ex.: chamadas/truco.mp3. Sem arquivo, o jogo usa balão + efeito sintetizado.

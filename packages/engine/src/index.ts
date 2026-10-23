@@ -108,7 +108,7 @@ export interface RoundResult { plays: Play[]; winnerTeam: Team | null; topSeat: 
 export interface PendingTruco { callerSeat: number; callerTeam: Team; proposed: number }
 export type HandMode = 'normal' | 'onze' | 'ferro';
 export type Phase = 'onze_decision' | 'playing' | 'match_over';
-export interface HistoryEntry { n: number; type: string; seat?: number; team?: Team; detail?: string }
+export interface HistoryEntry { n: number; type: string; seat?: number; team?: Team; detail?: string; card?: Card }
 
 export interface GameState {
   rules: Rules;
@@ -259,7 +259,7 @@ export function applyAction(state: GameState, action: Action): Result {
       const winnerTeam: Team | null = teams.size === 1 ? [...teams][0] : null;
       s.rounds.push({ plays: s.currentPlays, winnerTeam, topSeat });
       s.currentPlays = [];
-      log(s, { type: 'round_end', team: winnerTeam ?? undefined, detail: `rodada ${s.rounds.length}: ${winnerTeam === null ? 'empate (cangou)' : `time ${winnerTeam}`}` });
+      log(s, { type: 'round_end', team: winnerTeam ?? undefined, seat: topSeat, card: s.rounds[s.rounds.length - 1].plays.find((p) => p.seat === topSeat)!.card, detail: `rodada ${s.rounds.length}: ${winnerTeam === null ? 'empate (cangou)' : `time ${winnerTeam}`}` });
       const maoTeam = teamOf((s.dealer + 1) % n);
       const res = resolveHand(s.rounds.map((r) => r.winnerTeam), maoTeam, s.rules.allTiedResult);
       if (res !== undefined) { award(s, res, s.value, 'mão decidida'); return { ok: true, state: s }; }
@@ -340,3 +340,4 @@ export function getSpectatorView(s: GameState): Omit<PlayerView, 'you' | 'yourTe
   void seed;
   return { ...rest, spectator: true, seats: hands.map((h, i) => ({ seat: i, team: teamOf(i), cardCount: h.length, cards: null })) };
 }
+export * from './berros';
