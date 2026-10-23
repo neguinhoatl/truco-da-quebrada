@@ -1,0 +1,4 @@
+{ "name": "truco-da-quebrada", "private": true, "workspaces": ["packages/*","apps/*"],
+  "scripts": { "test": "npm run test -w @truco/engine && npm run test -w @truco/server",
+    "build": "npm run build -w @truco/engine && npm run build -w @truco/web && npm run build -w @truco/server",
+    "dev:web": "npm run dev -w @truco/web", "dev:server": "npm run dev -w @truco/server" } }
