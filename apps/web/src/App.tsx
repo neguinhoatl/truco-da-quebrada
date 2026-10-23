@@ -14,9 +14,10 @@ type Screen = 'entry' | 'menu' | 'rules' | 'settings' | 'table' | 'join';
 export default function App() {
   const [nick, setNick] = useState(() => localStorage.getItem('tq:nick') ?? '');
   const [sound, setSound] = useState(() => localStorage.getItem('tq:sound') !== 'off');
-  const [screen, setScreen] = useState<Screen>('entry');
+  const [screen, setScreen] = useState<Screen>(() => (new URLSearchParams(location.search).get('screen') as Screen) || 'entry');
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
+  const [seatCount, setSeatCount] = useState(() => Number(new URLSearchParams(location.search).get('n')) || 4);
   const toggleSound = () => { setSound((s) => { localStorage.setItem('tq:sound', s ? 'off' : 'on'); return !s; }); };
   const enter = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +32,7 @@ export default function App() {
       <div className="streetlight" aria-hidden />
       <h1 className="logo"><span>TRUCO</span><small>DA</small><span>QUEBRADA</span></h1>
       <p className="tagline">O truco raiz, agora online. Chama a rapaziada.</p>
-      <div className="preview" aria-hidden><Table seats={PREVIEW_SEATS} center={CENTER} vira={{ rank: '4', suit: 'paus' }} score={[7, 9]} value={3} compact /></div>
+      <div className="preview" aria-hidden><Table seats={PREVIEW_SEATS} spectators={['Dona Cida', 'Juninho']} center={CENTER} vira={{ rank: '4', suit: 'paus' }} score={[7, 9]} value={3} compact /></div>
       <form onSubmit={enter} className="entry-form">
         <label htmlFor="nick">Seu nome ou apelido</label>
         <input id="nick" required maxLength={20} autoComplete="nickname" value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Ex.: Zé do Bar" />
@@ -59,11 +60,18 @@ export default function App() {
   if (screen === 'join') return (
     <main className="screen panel"><h2>Entrar por código</h2>
       <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={8} placeholder="CÓDIGO DA MESA" />
-      <button className="btn primary" disabled title="Multiplayer na Fase 2">Entrar (em breve)</button>{back}</main>);
-  if (screen === 'table') return (
-    <main className="screen game"><Table seats={PREVIEW_SEATS.map((s, i) => i === 0 ? { ...s, nickname: nick } : s)} myCards={MY} center={CENTER} vira={{ rank: '4', suit: 'paus' }} score={[7, 9]} value={3} />
+      <button className="btn primary" disabled title="Multiplayer na Fase 2">Jogar (em breve)</button>
+      <button className="btn" disabled title="Multiplayer na Fase 2">👀 Assistir (em breve)</button>{back}</main>);
+  if (screen === 'table') {
+    const n = seatCount;
+    const names = [nick || 'Você', 'Tião', 'Parça', 'Baixinho', 'Seu Zé', 'Nega'];
+    const seats: TableSeat[] = Array.from({ length: n }, (_, i) => ({ nickname: names[i], team: (i % 2) as 0 | 1, cardCount: i === 0 ? 3 : 2, isTurn: i === 0, connected: i !== 3 }));
+    return (
+    <main className="screen game">
+      <div className="seg">{[2, 4, 6].map((k) => <button key={k} className={`btn small${k === n ? ' primary' : ''}`} onClick={() => setSeatCount(k)}>{k} jogadores</button>)}</div>
+      <Table seats={seats} spectators={['Dona Cida', 'Juninho', 'Cabeça', 'Lú']} myCards={MY} center={CENTER} vira={{ rank: '4', suit: 'paus' }} score={[7, 9]} value={3} />
       <div className="actions"><button className="btn truco">TRUCO!</button><button className="btn">Aceitar</button><button className="btn ghost">Correr</button></div>
-      <p className="notice">Mesa de demonstração — partida online chega na Fase 2.</p>{back}</main>);
+      <p className="notice">Mesa de demonstração — partida online chega na Fase 2.</p>{back}</main>); }
 
   return (
     <main className="screen menu">

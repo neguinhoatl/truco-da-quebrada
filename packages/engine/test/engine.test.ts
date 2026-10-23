@@ -380,3 +380,26 @@ describe('partidas completas simuladas', () => {
     dealers.slice(1).forEach((d, i) => expect(d).toBe(((dealers[i] as number) + 1) % 4));
   });
 });
+
+import { getSpectatorView } from '../src/index';
+describe('visão de espectador', () => {
+  for (const n of [2, 4, 6] as const)
+    it(`${n}j: espectador não vê nenhuma carta em mão nem a semente`, () => {
+      let g = createGame({ playersCount: n }, { seed: 99 });
+      g = playFirst(g);
+      const v = getSpectatorView(g);
+      expect(v.spectator).toBe(true);
+      expect((v as any).seed).toBeUndefined();
+      expect((v as any).hands).toBeUndefined();
+      v.seats.forEach((s, i) => { expect(s.cards).toBeNull(); expect(s.cardCount).toBe(g.hands[i].length); });
+      const json = JSON.stringify({ ...v, history: [], currentPlays: [], rounds: [] });
+      for (const card of g.hands.flat()) expect(json).not.toContain(JSON.stringify(card));
+    });
+  it('mão de onze: espectador continua sem ver cartas', () => {
+    let g = createGame({ playersCount: 4 }, { seed: 11 });
+    g = structuredClone(g); g.score = [5, 10];
+    g = ok(g, { type: 'truco', seat: 1 }); g = ok(g, { type: 'run', seat: 0 });
+    expect(g.mode).toBe('onze');
+    getSpectatorView(g).seats.forEach((s) => expect(s.cards).toBeNull());
+  });
+});

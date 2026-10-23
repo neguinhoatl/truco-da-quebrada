@@ -23,4 +23,18 @@ describe('server stub', () => {
     expect((await emit(c, 'room:join', { nickname: 'Bia', code: cr.code })).error).toBe('Mesa cheia');
     [a, b, c].forEach((s) => s.close());
   });
+  it('espectadores: não ocupam assento, entram com mesa cheia, limite 10', async () => {
+    const url = `http://localhost:${port}`;
+    const host = client(url), p2 = client(url);
+    const cr = await emit(host, 'room:create', { nickname: 'Dono', rules: { playersCount: 2 } });
+    const specs = Array.from({ length: 11 }, () => client(url));
+    for (let i = 0; i < 10; i++) {
+      const r = await emit(specs[i], 'room:join', { nickname: `Galera${i}`, code: cr.code, role: 'spectator' });
+      expect(r).toMatchObject({ ok: true, role: 'spectator', seat: null, spectators: i + 1 });
+    }
+    expect((await emit(p2, 'room:join', { nickname: 'Jogador', code: cr.code })).seat).toBe(1); // assento continua livre
+    expect((await emit(specs[10], 'room:join', { nickname: 'Extra', code: cr.code, role: 'spectator' })).ok).toBe(false);
+    expect((await emit(specs[0], 'room:join', { nickname: 'Galera0', code: cr.code })).ok).toBe(false); // não vira jogador também
+    [host, p2, ...specs].forEach((s) => s.close());
+  });
 });

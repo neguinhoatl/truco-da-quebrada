@@ -333,3 +333,10 @@ export function legalActions(s: GameState, seat: number): Action['type'][] {
   }
   return acts;
 }
+
+/** Visão de espectador: nenhuma carta em mão, nenhuma semente. Só mesa pública. */
+export function getSpectatorView(s: GameState): Omit<PlayerView, 'you' | 'yourTeam'> & { spectator: true } {
+  const { hands, seed, ...rest } = structuredClone(s);
+  void seed;
+  return { ...rest, spectator: true, seats: hands.map((h, i) => ({ seat: i, team: teamOf(i), cardCount: h.length, cards: null })) };
+}
