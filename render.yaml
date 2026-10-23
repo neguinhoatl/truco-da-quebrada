@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: truco-da-quebrada
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npx tsx apps/server/src/index.ts
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
